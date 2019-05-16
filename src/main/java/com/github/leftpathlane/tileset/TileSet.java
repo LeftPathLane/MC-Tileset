@@ -3,6 +3,7 @@ package com.github.leftpathlane.tileset;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -36,8 +37,11 @@ public class TileSet {
 	public void setBlock(Location location, Material material, byte data) {
 		int x = location.getBlockX() & 15;
 		int z = location.getBlockZ() & 15;
+		Tile thisTile = getTile(location);
+		if (thisTile == null) return;
+		Pair vals = thisTile.transformation.normalise(x, z);
 		for (Tile tile : tileList) {
-			tile.setBlock(x, location.getBlockY(), z, material, data);
+			tile.setBlock(vals.getX(), location.getBlockY(), vals.getZ(), material, data);
 		}
 	}
 
@@ -45,13 +49,63 @@ public class TileSet {
 		tileList.removeIf(tile -> tile.equals(location));
 	}
 
+	public Tile getTile(Location location) {
+		for (Tile tile : tileList) {
+			if (tile.equals(location)) return tile;
+		}
+		return null;
+	}
+
+	public enum TileTransformation {
+		NORMAL,
+		ROTATE_90,
+		ROTATE_180,
+		ROTATE_270;
+
+		public TileTransformation next() {
+			int ord = this.ordinal() + 1;
+			if (ord >= values().length) return values()[0];
+			return values()[ord];
+		}
+
+		public Pair transform(int x, int z) {
+			switch (this) {
+				case ROTATE_90:
+					return new Pair(15 - z, x);
+				case ROTATE_180:
+					return new Pair(15 - x, 15 - z);
+				case ROTATE_270:
+					return new Pair(z, 15 - x);
+				default:
+					return new Pair(x, z);
+			}
+		}
+
+		public Pair normalise(int x, int z) {
+			switch (this) {
+				case ROTATE_90:
+					return new Pair(z, 15 - x);
+				case ROTATE_180:
+					return new Pair(15 - x, 15 - z);
+				case ROTATE_270:
+					return new Pair(15 - z, x);
+				default:
+					return new Pair(x, z);
+			}
+		}
+	}
+
 	@Getter
 	@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 	public class Tile {
 		private final int x, z;
 
+		@Setter
+		private TileTransformation transformation = TileTransformation.NORMAL;
+
 		public void setBlock(int x, int y, int z, Material material, byte data) {
-			Location location = new Location(world, (this.x << 4) + x, y, (this.z << 4) + z);
+			Pair vals = transformation.transform(x, z);
+			Location location = new Location(world, (this.x << 4) + vals.getX(), y, (this.z << 4) + vals.getZ());
 			Block block = world.getBlockAt(location);
 			block.setType(material);
 			block.setData(data);

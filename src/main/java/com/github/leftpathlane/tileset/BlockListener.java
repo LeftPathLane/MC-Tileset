@@ -25,6 +25,7 @@ public class BlockListener implements Listener {
 		if (event.getAction() == Action.LEFT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 			if (event.getItem() == null) return;
 			if (event.getItem().getType() == Material.IRON_INGOT) {
+				event.setCancelled(true);
 				if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 					TileSet tileSet = uuidTileSetMap.get(event.getPlayer().getUniqueId());
 					if (tileSet == null) {
@@ -49,6 +50,7 @@ public class BlockListener implements Listener {
 					uuidTileSetMap.put(event.getPlayer().getUniqueId(), tileSet);
 				}
 			} else if (event.getItem().getType() == Material.GOLD_INGOT) {
+				event.setCancelled(true);
 				TileSet set = tileSetMap.remove(new Pair(event.getClickedBlock().getChunk()));
 				if (set != null) {
 					set.removeTile(event.getClickedBlock().getLocation());
@@ -56,6 +58,14 @@ public class BlockListener implements Listener {
 				} else {
 					event.getPlayer().sendMessage("Could nto find tileset associated with that chunk");
 				}
+			} else if (event.getItem().getType() == Material.DIAMOND) {
+				TileSet set = tileSetMap.get(new Pair(event.getClickedBlock().getChunk()));
+				if (set == null) return;
+				TileSet.Tile tile = set.getTile(event.getClickedBlock().getLocation());
+				if (tile == null) return;
+				event.setCancelled(true);
+				tile.setTransformation(tile.getTransformation().next());
+				event.getPlayer().sendMessage(tile.getTransformation().name());
 			}
 		}
 	}
@@ -72,31 +82,5 @@ public class BlockListener implements Listener {
 		TileSet tileSet = tileSetMap.get(new Pair(event.getBlock().getChunk()));
 		if (tileSet == null) return;
 		tileSet.setBlock(event.getBlock().getLocation(), Material.AIR, (byte) 0);
-	}
-
-	@Getter
-	@RequiredArgsConstructor
-	private class Pair {
-		private final int x, z;
-
-		public Pair(Chunk chunk) {
-			this.x = chunk.getX();
-			this.z = chunk.getZ();
-		}
-
-		@Override
-		public int hashCode() {
-			return x * 7 + z;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (obj instanceof Chunk) {
-				return ((Chunk) obj).getX() == x && ((Chunk) obj).getZ() == z;
-			} else if (obj instanceof Pair) {
-				return ((Pair) obj).x == x && ((Pair) obj).z == z;
-			}
-			return false;
-		}
 	}
 }
