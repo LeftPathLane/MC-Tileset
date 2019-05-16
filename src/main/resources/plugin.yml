@@ -1,0 +1,3 @@
+name: TileSet
+version: 0.0
+main: com.github.leftpathlane.tileset.TileSetPlugin
